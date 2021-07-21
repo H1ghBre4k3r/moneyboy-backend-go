@@ -1,13 +1,10 @@
 package main
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/server"
+)
 
 func main() {
-	app := fiber.New()
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World 👋!")
-	})
-
-	app.Listen(":3000")
+	server := server.New()
+	server.Start(":3000")
 }
