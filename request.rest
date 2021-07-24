@@ -1,5 +1,5 @@
 ### Request to login route
-POST http://localhost:3000/auth/login
+POST http://localhost:3000/api/v1/auth/login
 Content-Type: application/json
 
 {
@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ### Request to register route
-POST http://localhost:3000/auth/register
+POST http://localhost:3000/api/v1/auth/register
 Content-Type: application/json
 
 {
@@ -17,3 +17,6 @@ Content-Type: application/json
     "displayName": "Test User",
     "email": "test@example.com"
 }
+
+### 
+GET http://localhost:3000/api/v1/user/profile/123

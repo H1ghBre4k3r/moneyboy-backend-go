@@ -2,6 +2,7 @@ package modules
 
 import (
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/auth"
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/user"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -13,10 +14,10 @@ func New() *ModuleManager {
 	return &ModuleManager{}
 }
 
-func (m *ModuleManager) Init(app *fiber.App) {
-	auth := auth.New(app)
-
-	m.register(auth)
+func (m *ModuleManager) InitV1(router fiber.Router) {
+	auth := auth.New(router)
+	user := user.New(router)
+	m.register(auth, user)
 }
 
 func (m *ModuleManager) register(modules ...interface{}) {

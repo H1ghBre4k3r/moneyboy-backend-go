@@ -35,5 +35,5 @@ func (s *Server) setup() {
 }
 
 func (s *Server) init() {
-	s.registry.Init(s.app)
+	s.registry.InitV1(s.app.Group("/api/v1"))
 }

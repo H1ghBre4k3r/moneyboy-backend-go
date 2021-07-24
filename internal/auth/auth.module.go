@@ -4,16 +4,18 @@ import "github.com/gofiber/fiber/v2"
 
 type AuthModule struct {
 	authController *AuthController
+	authService    *AuthService
 }
 
-func New(app *fiber.App) *AuthModule {
+func New(router fiber.Router) *AuthModule {
 
 	authService := createService()
 
 	authController := createController(authService)
-	authController.RegisterRoutes(app.Group("/auth"))
+	authController.RegisterRoutes(router.Group("/auth"))
 
 	return &AuthModule{
-		authController: authController,
+		authController,
+		authService,
 	}
 }
