@@ -1,0 +1,19 @@
+### Request to login route
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+    "username": "test",
+    "password": "password"
+}
+
+### Request to register route
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+    "username": "test",
+    "password": "password",
+    "displayName": "Test User",
+    "email": "test@example.com"
+}

@@ -1,6 +1,9 @@
 package server
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+)
 
 type server struct {
 	app *fiber.App
@@ -9,7 +12,7 @@ type server struct {
 func New() *server {
 
 	app := fiber.New()
-
+	app.Use(logger.New())
 	setupRoutes(app)
 
 	return &server{
