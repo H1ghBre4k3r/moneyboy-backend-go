@@ -1,9 +1,14 @@
 package modules
 
 import (
+	"fmt"
+
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/auth"
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/user"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 type ModuleManager struct {
@@ -15,9 +20,15 @@ func New() *ModuleManager {
 }
 
 func (m *ModuleManager) InitV1(router fiber.Router) {
-	auth := auth.New(router)
+	dsn := "root:12345678@tcp(127.0.0.1:3306)/moneyboy?charset=utf8mb4&parseTime=True&loc=Local"
+	db := database.Create(mysql.Open(dsn), &gorm.Config{})
+	err := db.Connect()
+	if err != nil {
+		fmt.Printf("err: %v", err.Error())
+	}
+	auth := auth.New(router, db)
 	user := user.New(router)
-	m.register(auth, user)
+	m.register(db, auth, user)
 }
 
 func (m *ModuleManager) register(modules ...interface{}) {

@@ -21,7 +21,11 @@ func (ctrl *AuthController) postLogin(c *fiber.Ctx) error {
 	if validation.New(c).Validate(user) != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	return ctrl.service.Login(c, user)
+	retVal, err := ctrl.service.Login(user)
+	if err != nil {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	return c.JSON(retVal)
 }
 
 func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
@@ -29,7 +33,16 @@ func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
 	if validation.New(c).Validate(user) != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	return ctrl.service.Register(c, user)
+	status := fiber.StatusAccepted
+	internal, err := ctrl.service.Register(user)
+	if err != nil {
+		if internal {
+			status = fiber.StatusInternalServerError
+		} else {
+			status = fiber.StatusBadRequest
+		}
+	}
+	return c.SendStatus(status)
 }
 
 func (ctrl *AuthController) RegisterRoutes(router fiber.Router) {

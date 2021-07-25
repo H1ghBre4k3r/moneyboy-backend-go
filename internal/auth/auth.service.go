@@ -1,62 +1,70 @@
 package auth
 
 import (
+	"errors"
+
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/models"
-	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
 type AuthService struct {
-	db *gorm.DB
+	db *database.Connection
 }
 
-func createService() *AuthService {
-
-	// TODO lome: move this to own module
-	dsn := "root:12345678@tcp(127.0.0.1:3306)/moneyboy?charset=utf8mb4&parseTime=True&loc=Local"
-
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect to database")
-	}
-
-	db.AutoMigrate(&models.User{})
+func createService(db *database.Connection) *AuthService {
 	return &AuthService{
 		db,
 	}
 }
 
-func (s *AuthService) Login(c *fiber.Ctx, user *LoginDTO) error {
+// Login a user
+func (s *AuthService) Login(user *LoginDTO) (interface{}, error) {
 
-	dbUser := &models.User{}
-	s.db.Where("username = ?", user.Username).First(dbUser)
+	dbUser := s.db.Users().FindByUsername(user.Username)
 
-	if dbUser.Username != user.Username || bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password)) != nil {
-		return c.SendStatus(fiber.StatusUnauthorized)
+	if dbUser == nil ||
+		dbUser.Username != user.Username || bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password)) != nil {
+		return nil, errors.New("credentials do not match")
 	}
 
-	return c.JSON(dbUser)
+	return dbUser, nil
 }
 
-func (s *AuthService) Register(c *fiber.Ctx, user *RegisterDTO) error {
+// Register a new user
+// returns (bool, error), where the bool is a flag for indicating an internal server error
+func (s *AuthService) Register(user *RegisterDTO) (bool, error) {
+
+	// check for existance of user
+	if check := s.db.Users().FindByUsername(user.Username); check != nil {
+		return false, errors.New("username already taken")
+	}
+
+	newUser, err := createUserFromDTO(user)
+	if err != nil {
+		return true, err
+	}
+
+	if err := s.db.Users().Create(newUser); err != nil {
+		return true, err
+	}
+	return false, nil
+}
+
+func createUserFromDTO(user *RegisterDTO) (*models.User, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return c.SendStatus(fiber.StatusInternalServerError)
+		return nil, err
 	}
 
-	newUser := &models.User{
+	return &models.User{
 		Id:            uuid.NewString(),
 		Username:      user.Username,
 		DisplayName:   user.DisplayName,
 		Password:      string(hashedPassword),
 		Email:         user.Email,
 		EmailVerified: false,
-	}
-
-	s.db.Create(newUser)
-	return c.SendStatus(fiber.StatusAccepted)
+	}, nil
 }
