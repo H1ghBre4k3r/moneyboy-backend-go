@@ -12,13 +12,16 @@ type Connection struct {
 	userConnection *UserConnection
 }
 
-// Create a new connection, but do not connect
-func Create(dialector gorm.Dialector, opts ...gorm.Option) *Connection {
-	return &Connection{dialector: dialector, opts: opts, db: nil}
+func New(dialector gorm.Dialector, opts ...gorm.Option) *Connection {
+	con := &Connection{dialector: dialector, opts: opts, db: nil}
+	if err := con.connect(); err != nil {
+		panic("cannot connect to database")
+	}
+	return con
 }
 
 // Connect to the database
-func (c *Connection) Connect() error {
+func (c *Connection) connect() error {
 	if c.db != nil {
 		panic("already connected to a database")
 	}

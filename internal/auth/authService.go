@@ -2,9 +2,11 @@ package auth
 
 import (
 	"errors"
+	"time"
 
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/models"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -29,7 +31,16 @@ func (s *AuthService) Login(user *LoginDTO) (interface{}, error) {
 		return nil, errors.New("credentials do not match")
 	}
 
-	return dbUser, nil
+	token, err := s.jwtFromId(dbUser.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return struct {
+		Token string `json:"token"`
+	}{
+		token,
+	}, nil
 }
 
 // Register a new user
@@ -67,4 +78,14 @@ func createUserFromDTO(user *RegisterDTO) (*models.User, error) {
 		Email:         user.Email,
 		EmailVerified: false,
 	}, nil
+}
+
+func (s *AuthService) jwtFromId(id string) (string, error) {
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	claims := token.Claims.(jwt.MapClaims)
+	claims["id"] = id
+	claims["exp"] = time.Now().Add(time.Minute * 15).Unix()
+
+	return token.SignedString([]byte("mySigningKey"))
 }

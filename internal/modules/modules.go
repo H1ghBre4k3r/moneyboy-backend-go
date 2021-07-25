@@ -1,8 +1,6 @@
 package modules
 
 import (
-	"fmt"
-
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/auth"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/user"
@@ -21,11 +19,7 @@ func New() *ModuleManager {
 
 func (m *ModuleManager) InitV1(router fiber.Router) {
 	dsn := "root:12345678@tcp(127.0.0.1:3306)/moneyboy?charset=utf8mb4&parseTime=True&loc=Local"
-	db := database.Create(mysql.Open(dsn), &gorm.Config{})
-	err := db.Connect()
-	if err != nil {
-		fmt.Printf("err: %v", err.Error())
-	}
+	db := database.New(mysql.Open(dsn), &gorm.Config{})
 	auth := auth.New(router, db)
 	user := user.New(router)
 	m.register(db, auth, user)

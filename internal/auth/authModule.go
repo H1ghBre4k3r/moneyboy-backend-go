@@ -22,3 +22,7 @@ func New(router fiber.Router, db *database.Connection) *AuthModule {
 		authService,
 	}
 }
+
+func (m *AuthModule) Service() *AuthService {
+	return m.authService
+}

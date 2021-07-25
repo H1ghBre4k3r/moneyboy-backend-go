@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt"
 )
 
 type UserController struct {
@@ -14,9 +15,12 @@ func createController(service *UserService) *UserController {
 }
 
 func (ctrl *UserController) getProfile(c *fiber.Ctx) error {
-	return ctrl.service.GetProfile(c)
+	user := c.Locals("user").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
+	id := claims["id"].(string)
+	return c.SendString(id)
 }
 
 func (ctrl *UserController) RegisterRoutes(router fiber.Router) {
-	router.Get("/profile/:id", ctrl.getProfile)
+	router.Get("/profile", ctrl.getProfile)
 }
