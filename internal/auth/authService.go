@@ -31,7 +31,10 @@ func (s *AuthService) Login(user *LoginDTO) (interface{}, error) {
 		return nil, errors.New("credentials do not match")
 	}
 
-	token, err := s.jwtFromId(dbUser.Id)
+	token, err := s.genJwt(map[string]interface{}{
+		"id":  dbUser.Id,
+		"exp": time.Now().Add(time.Minute * 15).Unix(),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -80,12 +83,13 @@ func createUserFromDTO(user *RegisterDTO) (*models.User, error) {
 	}, nil
 }
 
-func (s *AuthService) jwtFromId(id string) (string, error) {
+func (s *AuthService) genJwt(cls map[string]interface{}) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
-	claims["id"] = id
-	claims["exp"] = time.Now().Add(time.Minute * 15).Unix()
+	for key, value := range cls {
+		claims[key] = value
+	}
 
 	return token.SignedString([]byte("mySigningKey"))
 }
