@@ -10,15 +10,16 @@ type UserController struct {
 }
 
 func createController(service *UserService) *UserController {
-	controller := &UserController{}
+	controller := &UserController{service}
 	return controller
 }
 
 func (ctrl *UserController) getProfile(c *fiber.Ctx) error {
-	user := c.Locals("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
+	userClaims := c.Locals("user").(*jwt.Token)
+	claims := userClaims.Claims.(jwt.MapClaims)
 	id := claims["id"].(string)
-	return c.SendString(id)
+	user := ctrl.service.GetProfile(id)
+	return c.JSON(user)
 }
 
 func (ctrl *UserController) RegisterRoutes(router fiber.Router) {

@@ -10,9 +10,9 @@ type AuthModule struct {
 	authService    *AuthService
 }
 
-func New(router fiber.Router, db *database.Connection) *AuthModule {
+func New(router fiber.Router, db *database.Connection, jwt JWT) *AuthModule {
 
-	authService := createService(db)
+	authService := createService(db, jwt)
 
 	authController := createController(authService)
 	authController.RegisterRoutes(router.Group("/auth"))

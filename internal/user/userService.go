@@ -1,14 +1,19 @@
 package user
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
+)
 
 type UserService struct {
+	db *database.Connection
 }
 
-func createService() *UserService {
-	return &UserService{}
+func createService(db *database.Connection) *UserService {
+	return &UserService{
+		db,
+	}
 }
 
-func (s *UserService) GetProfile(c *fiber.Ctx) error {
-	return c.SendString("Hello, world!")
+func (s *UserService) GetProfile(id string) interface{} {
+	return s.db.Users().FindById(id)
 }
