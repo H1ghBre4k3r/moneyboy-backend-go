@@ -40,3 +40,8 @@ func (uc *UserConnection) Create(user *models.User) error {
 func (uc *UserConnection) DeleteById(id string) error {
 	return uc.db.Delete("id = ?", id).Error
 }
+
+// Delete a user by username
+func (uc *UserConnection) DeleteByUsername(username string) error {
+	return uc.db.Delete("username = ?", username).Error
+}
