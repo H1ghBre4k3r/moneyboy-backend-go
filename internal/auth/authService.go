@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/global"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/models"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -15,7 +16,7 @@ type AuthService struct {
 	jwt JWT
 }
 
-func createService(db *database.Connection, jwt JWT) *AuthService {
+func New(db *database.Connection, jwt JWT) *AuthService {
 	return &AuthService{
 		db,
 		jwt,
@@ -23,7 +24,7 @@ func createService(db *database.Connection, jwt JWT) *AuthService {
 }
 
 // Login a user
-func (s *AuthService) Login(user *LoginDTO) (interface{}, error) {
+func (s *AuthService) Login(user *global.LoginDTO) (interface{}, error) {
 
 	dbUser := s.db.Users().FindByUsername(user.Username)
 
@@ -49,7 +50,7 @@ func (s *AuthService) Login(user *LoginDTO) (interface{}, error) {
 
 // Register a new user
 // returns (bool, error), where the bool is a flag for indicating an internal server error
-func (s *AuthService) Register(user *RegisterDTO) (bool, error) {
+func (s *AuthService) Register(user *global.RegisterDTO) (bool, error) {
 
 	// check for existance of user
 	if check := s.db.Users().FindByUsername(user.Username); check != nil {
@@ -67,7 +68,7 @@ func (s *AuthService) Register(user *RegisterDTO) (bool, error) {
 	return false, nil
 }
 
-func createUserFromDTO(user *RegisterDTO) (*models.User, error) {
+func createUserFromDTO(user *global.RegisterDTO) (*models.User, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {

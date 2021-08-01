@@ -1,27 +1,34 @@
-package auth
+package router
 
 import (
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/global"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/validation"
 	"github.com/gofiber/fiber/v2"
 )
 
-type AuthController struct {
-	service *AuthService
+type AuthService interface {
+	Login(*global.LoginDTO) (interface{}, error)
+	Register(*global.RegisterDTO) (bool, error)
 }
 
-func createController(authService *AuthService) *AuthController {
-	controller := &AuthController{
+type AuthController struct {
+	authService AuthService
+}
+
+func authController(router fiber.Router, authService AuthService) *AuthController {
+	authController := &AuthController{
 		authService,
 	}
-	return controller
+	authController.registerRoutes(router)
+	return authController
 }
 
 func (ctrl *AuthController) postLogin(c *fiber.Ctx) error {
-	user := new(LoginDTO)
+	user := new(global.LoginDTO)
 	if validation.New(c).Validate(user) != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	retVal, err := ctrl.service.Login(user)
+	retVal, err := ctrl.authService.Login(user)
 	if err != nil {
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
@@ -29,12 +36,12 @@ func (ctrl *AuthController) postLogin(c *fiber.Ctx) error {
 }
 
 func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
-	user := new(RegisterDTO)
+	user := new(global.RegisterDTO)
 	if validation.New(c).Validate(user) != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 	status := fiber.StatusAccepted
-	internal, err := ctrl.service.Register(user)
+	internal, err := ctrl.authService.Register(user)
 	if err != nil {
 		if internal {
 			status = fiber.StatusInternalServerError
@@ -45,7 +52,7 @@ func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
 	return c.SendStatus(status)
 }
 
-func (ctrl *AuthController) RegisterRoutes(router fiber.Router) {
+func (ctrl *AuthController) registerRoutes(router fiber.Router) {
 	router.Post("/login", ctrl.postLogin)
 	router.Post("/register", ctrl.postRegister)
 }

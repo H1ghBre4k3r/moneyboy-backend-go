@@ -8,7 +8,7 @@ type UserService struct {
 	db *database.Connection
 }
 
-func createService(db *database.Connection) *UserService {
+func New(db *database.Connection) *UserService {
 	return &UserService{
 		db,
 	}
