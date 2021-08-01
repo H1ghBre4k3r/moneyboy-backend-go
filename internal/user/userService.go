@@ -1,19 +1,25 @@
 package user
 
-import (
-	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
-)
+import "git.pesca.dev/pesca-dev/moneyboy-backend/internal/models"
 
-type UserService struct {
-	db *database.Connection
+type Database interface {
+	FindByUsername(string) *models.User
+	FindById(string) *models.User
+	Create(*models.User) error
+	DeleteById(string) error
+	DeleteByUsername(string) error
 }
 
-func New(db *database.Connection) *UserService {
+type UserService struct {
+	db Database
+}
+
+func New(db Database) *UserService {
 	return &UserService{
 		db,
 	}
 }
 
-func (s *UserService) GetProfile(id string) interface{} {
-	return s.db.Users().FindById(id)
+func (s *UserService) GetUser(id string) *models.User {
+	return s.db.FindById(id)
 }

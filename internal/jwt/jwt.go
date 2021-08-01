@@ -36,7 +36,13 @@ func (j *JWT) Middleware() fiber.Handler {
 		SigningKey: []byte("mySigningKey"),
 		Filter: func(c *fiber.Ctx) bool {
 			// TODO lome: add param or sth else for filtered routes
-			return string(c.Request().URI().LastPathSegment()) == "login"
+			ok := []string{"login", "register"}
+			for _, route := range ok {
+				if string(c.Request().URI().LastPathSegment()) == route {
+					return true
+				}
+			}
+			return false
 		},
 	})
 }

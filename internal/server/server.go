@@ -5,9 +5,11 @@ import (
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/jwt"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/router"
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/session"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/user"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	gojwt "github.com/golang-jwt/jwt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -49,12 +51,24 @@ func (s *Server) loadModules() {
 
 	jwt := jwt.New("mySigningKey")
 	s.app.Use(jwt.Middleware())
+	// TODO lome: move to module and load session
+	s.app.Use(func(c *fiber.Ctx) error {
+		userClaims := c.Locals("user")
+		if userClaims != nil {
+			claims := userClaims.(*gojwt.Token).Claims.(gojwt.MapClaims)
+			id := claims["id"].(string)
+			c.Locals("sessionId", id)
+		}
+		return c.Next()
+	})
 
-	auth := auth.New(db, jwt)
-	user := user.New(db)
+	user := user.New(db.Users())
+	session := session.New(db.Sessions(), user)
+	auth := auth.New(db, jwt, session)
 	router := router.New(s.app.Group("/api/v1"), &router.RouterParams{
-		UserService: user,
-		AuthService: auth,
+		UserService:    user,
+		SessionService: session,
+		AuthService:    auth,
 	})
 	s.modules = append(s.modules, db, jwt, auth, user, router)
 }

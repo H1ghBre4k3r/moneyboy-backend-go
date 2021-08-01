@@ -3,8 +3,9 @@ package router
 import "github.com/gofiber/fiber/v2"
 
 type RouterParams struct {
-	UserService UserService
-	AuthService AuthService
+	UserService    UserService
+	AuthService    AuthService
+	SessionService SessionService
 }
 
 type Router struct {
@@ -13,7 +14,7 @@ type Router struct {
 
 func New(base fiber.Router, params *RouterParams) *Router {
 
-	userController := userController(base.Group("/user"), params.UserService)
+	userController := userController(base.Group("/user"), params.UserService, params.SessionService)
 	authController := authController(base.Group("/auth"), params.AuthService)
 
 	router := &Router{}

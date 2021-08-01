@@ -11,15 +11,23 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthService struct {
-	db  *database.Connection
-	jwt JWT
+type SessionService interface {
+	GetSession(string) *models.Session
+	CreateSession(string) (string, error)
+	DestroySession(string) error
 }
 
-func New(db *database.Connection, jwt JWT) *AuthService {
+type AuthService struct {
+	db             *database.Connection
+	jwt            JWT
+	sessionService SessionService
+}
+
+func New(db *database.Connection, jwt JWT, sessionService SessionService) *AuthService {
 	return &AuthService{
 		db,
 		jwt,
+		sessionService,
 	}
 }
 
@@ -33,8 +41,13 @@ func (s *AuthService) Login(user *global.LoginDTO) (interface{}, error) {
 		return nil, errors.New("credentials do not match")
 	}
 
+	sessionId, err := s.sessionService.CreateSession(dbUser.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	token, err := s.jwt.Sign(map[string]interface{}{
-		"id":  dbUser.Id,
+		"id":  sessionId,
 		"exp": time.Now().Add(time.Minute * 15).Unix(),
 	})
 	if err != nil {
@@ -76,7 +89,7 @@ func createUserFromDTO(user *global.RegisterDTO) (*models.User, error) {
 	}
 
 	return &models.User{
-		Id:            uuid.NewString(),
+		ID:            uuid.NewString(),
 		Username:      user.Username,
 		DisplayName:   user.DisplayName,
 		Password:      string(hashedPassword),
