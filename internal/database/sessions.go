@@ -26,5 +26,5 @@ func (sc *SessionConnection) Get(id string) *models.Session {
 }
 
 func (sc *SessionConnection) Delete(id string) error {
-	return sc.db.Delete("id = ?", id).Error
+	return sc.db.Where("id = ?", id).Delete(&models.Session{}).Error
 }

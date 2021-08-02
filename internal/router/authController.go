@@ -2,6 +2,7 @@ package router
 
 import (
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/global"
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/models"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/validation"
 	"github.com/gofiber/fiber/v2"
 )
@@ -10,6 +11,7 @@ type AuthService interface {
 	Login(*global.LoginDTO) (string, string, error)
 	Register(*global.RegisterDTO) (bool, error)
 	RefreshToken(*global.RefreshTokenDTO) (string, error)
+	Logout(*models.Session) error
 }
 
 type AuthController struct {
@@ -97,8 +99,18 @@ func (ctrl *AuthController) postRefresh(c *fiber.Ctx) error {
 	})
 }
 
+// DELETE /auth/logout
+func (ctrl *AuthController) deleteLogout(c *fiber.Ctx) error {
+	session := c.Locals("session").(*models.Session)
+	if err := ctrl.authService.Logout(session); err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	return c.SendStatus(fiber.StatusAccepted)
+}
+
 func (ctrl *AuthController) _registerRoutes(router fiber.Router) {
 	router.Post("/login", ctrl.postLogin)
 	router.Post("/register", ctrl.postRegister)
 	router.Post("/refresh", ctrl.postRefresh)
+	router.Delete("/logout", ctrl.deleteLogout)
 }

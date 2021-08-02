@@ -127,6 +127,11 @@ func (s *AuthService) RefreshToken(payload *global.RefreshTokenDTO) (string, err
 	return s.tokenJwt.Sign(createAccessTokenClaims(sessionId))
 }
 
+// Log a user out (delete the session)
+func (s *AuthService) Logout(session *models.Session) error {
+	return s.sessionService.DestroySession(session.ID)
+}
+
 func createUserFromDTO(user *global.RegisterDTO) (*models.User, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
