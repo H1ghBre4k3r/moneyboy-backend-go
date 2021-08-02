@@ -2,17 +2,22 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/global"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/models"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
+const SESSION_ID_FIELD = "id"
+
 type JWT interface {
 	Sign(map[string]interface{}) (string, error)
+	Decode(string) (jwt.Claims, error)
 }
 
 type SessionService interface {
@@ -23,50 +28,54 @@ type SessionService interface {
 
 type AuthService struct {
 	db             *database.Connection
-	jwt            JWT
+	tokenJwt       JWT
+	refreshJwt     JWT
 	sessionService SessionService
 }
 
-func New(db *database.Connection, jwt JWT, sessionService SessionService) *AuthService {
+func New(db *database.Connection, tokenJwt JWT, refreshJwt JWT, sessionService SessionService) *AuthService {
 	return &AuthService{
 		db,
-		jwt,
+		tokenJwt,
+		refreshJwt,
 		sessionService,
 	}
 }
 
 // Login a user
-func (s *AuthService) Login(user *global.LoginDTO) (interface{}, error) {
+func (s *AuthService) Login(user *global.LoginDTO) (string, string, error) {
 
 	dbUser := s.db.Users().FindByUsername(user.Username)
 
 	if dbUser == nil ||
 		dbUser.Username != user.Username || bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password)) != nil {
-		return nil, errors.New("credentials do not match")
+		return "", "", errors.New("credentials do not match")
 	}
 
 	if !dbUser.EmailVerified {
-		return nil, errors.New("email not verified")
+		return "", "", errors.New("email not verified")
 	}
 
 	sessionId, err := s.sessionService.CreateSession(dbUser.ID)
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 
-	token, err := s.jwt.Sign(map[string]interface{}{
-		"id":  sessionId,
-		"exp": time.Now().Add(time.Minute * 15).Unix(),
+	// optain a normal token
+	token, err := s.tokenJwt.Sign(createAccessTokenClaims(sessionId))
+	if err != nil {
+		return "", "", err
+	}
+
+	// optain a refresh token
+	refreshToken, err := s.refreshJwt.Sign(map[string]interface{}{
+		SESSION_ID_FIELD: sessionId,
 	})
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 
-	return struct {
-		Token string `json:"token"`
-	}{
-		token,
-	}, nil
+	return token, refreshToken, nil
 }
 
 // Register a new user
@@ -89,6 +98,35 @@ func (s *AuthService) Register(user *global.RegisterDTO) (bool, error) {
 	return false, nil
 }
 
+// Refresh a token for a valid session
+// If token cant be decoded, an error will be returned, but the string will be empty
+// If the token can be decoded, but is malformed or the session is not valid, an error will
+// be returned aswell, but the string will contain the reason.
+// If everything is successful, the new access token will be returned and the error will be nil
+func (s *AuthService) RefreshToken(payload *global.RefreshTokenDTO) (string, error) {
+	// try to decode the provided payload
+	claims, err := s.refreshJwt.Decode(payload.RefreshToken)
+	if err != nil || claims == nil {
+		return "", errors.New("malformed token")
+	}
+
+	// try to access the session id
+	sessionId, ok := claims.(jwt.MapClaims)[SESSION_ID_FIELD].(string)
+	if !ok {
+		return "invalid token provided", errors.New("invalid token provided")
+	}
+
+	// try to get the session
+	session := s.sessionService.GetSession(sessionId)
+	if session == nil {
+		fmt.Println("no session")
+		return "session invalid", errors.New("session invalid")
+	}
+
+	// if all went fine, create a new access tokne
+	return s.tokenJwt.Sign(createAccessTokenClaims(sessionId))
+}
+
 func createUserFromDTO(user *global.RegisterDTO) (*models.User, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -104,4 +142,12 @@ func createUserFromDTO(user *global.RegisterDTO) (*models.User, error) {
 		Email:         user.Email,
 		EmailVerified: false,
 	}, nil
+}
+
+// create the claims for an access token based on a session id
+func createAccessTokenClaims(sessionId string) map[string]interface{} {
+	return map[string]interface{}{
+		SESSION_ID_FIELD: sessionId,
+		"exp":            time.Now().Add(time.Minute * 15).Unix(),
+	}
 }

@@ -11,3 +11,7 @@ type RegisterDTO struct {
 	Password    string `json:"password" validate:"required"`
 	Email       string `json:"email" validate:"required"`
 }
+
+type RefreshTokenDTO struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}

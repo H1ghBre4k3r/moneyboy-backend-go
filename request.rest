@@ -18,6 +18,14 @@ Content-Type: application/json
     "email": "test@example.com"
 }
 
-### 
+### Request to refresh token
+POST http://localhost:3000/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImExN2U3OWIxLTg2ZTAtNDBlYy04YjYwLWQxY2FkMGNmNDc5MyJ9.1OeKu25UauC2hl4kKhxhe5eCAWFCd0MCUYsQRaWYRSY"
+}
+
+### Get the profile of the user with the provided token
 GET http://localhost:3000/api/v1/user/profile
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mjc5MTM3NTIsImlkIjoiZTM0NzM5ODQtZmQ4YS00MjUzLWJlMDUtODFlZjVhMjNmMWRlIn0.YBzLEM2SKy2eX3zozo0m9L1NmND6yE659tV-uWXiEnE
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mjc5MTg5MTgsImlkIjoiYTE3ZTc5YjEtODZlMC00MGVjLThiNjAtZDFjYWQwY2Y0NzkzIn0.EHtQkAvnXhxx1sze0DpU3029lnC9iH5P6pEmoh6KNkI

@@ -7,12 +7,24 @@ import (
 )
 
 type AuthService interface {
-	Login(*global.LoginDTO) (interface{}, error)
+	Login(*global.LoginDTO) (string, string, error)
 	Register(*global.RegisterDTO) (bool, error)
+	RefreshToken(*global.RefreshTokenDTO) (string, error)
 }
 
 type AuthController struct {
 	authService AuthService
+}
+
+// Return object after a successful login
+type LoginReturn struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+// Return object after a successful token refresh
+type RefreshReturn struct {
+	AccessToken string `json:"access_token"`
 }
 
 func authController(router fiber.Router, authService AuthService) *AuthController {
@@ -31,11 +43,14 @@ func (ctrl *AuthController) postLogin(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 	// process user data
-	retVal, err := ctrl.authService.Login(user)
+	accessToken, refreshToken, err := ctrl.authService.Login(user)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).SendString(err.Error())
 	}
-	return c.JSON(retVal)
+	return c.JSON(&LoginReturn{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	})
 }
 
 // POST /auth/register
@@ -46,6 +61,8 @@ func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 	status := fiber.StatusAccepted
+
+	// try to register a new user
 	isInternalError, err := ctrl.authService.Register(user)
 	if err != nil {
 		if isInternalError {
@@ -57,9 +74,27 @@ func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
 	return c.SendStatus(status)
 }
 
+// POST /auth/refresh
 func (ctrl *AuthController) postRefresh(c *fiber.Ctx) error {
-	// TODO lome: implement
-	return c.SendStatus(fiber.StatusInternalServerError)
+	// validate the payload
+	payload := new(global.RefreshTokenDTO)
+	if validation.New(c).Validate(payload) != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	// generate a new access token
+	returnValue, err := ctrl.authService.RefreshToken(payload)
+	if err != nil {
+		if returnValue == "" {
+			return c.SendStatus(fiber.StatusInternalServerError)
+		} else {
+			return c.Status(fiber.StatusUnauthorized).SendString(returnValue)
+		}
+	}
+
+	return c.JSON(&RefreshReturn{
+		AccessToken: returnValue,
+	})
 }
 
 func (ctrl *AuthController) _registerRoutes(router fiber.Router) {

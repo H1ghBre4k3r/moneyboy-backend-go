@@ -51,18 +51,21 @@ func (s *Server) loadModules() {
 		Logger: gormlog.Default.LogMode(gormlog.Error),
 	})
 
-	jwt := jwt.New("mySigningKey")
-	s.app.Use(jwt.Middleware([]string{"/auth/login", "/auth/register"}))
-	// TODO lome: move to module and load session
+	tokenJwt := jwt.New("mySigningKey")
+	refreshJwt := jwt.New("refreshSigningKey")
+	s.app.Use(tokenJwt.Middleware([]string{"/auth/login", "/auth/register", "/auth/refresh"}))
 
 	user := user.New(db.Users())
+
 	session := session.New(db.Sessions(), user)
 	s.app.Use(session.Middleware())
-	auth := auth.New(db, jwt, session)
+
+	auth := auth.New(db, tokenJwt, refreshJwt, session)
+
 	router := router.New(s.app.Group("/api/v1"), &router.RouterParams{
 		UserService:    user,
 		SessionService: session,
 		AuthService:    auth,
 	})
-	s.modules = append(s.modules, db, jwt, auth, user, router)
+	s.modules = append(s.modules, db, tokenJwt, refreshJwt, user, auth, router)
 }

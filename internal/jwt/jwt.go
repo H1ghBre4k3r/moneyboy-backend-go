@@ -18,6 +18,7 @@ func New(secretKey string) *JWT {
 	}
 }
 
+// Sign a map of claims
 func (j *JWT) Sign(cls map[string]interface{}) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
@@ -29,9 +30,19 @@ func (j *JWT) Sign(cls map[string]interface{}) (string, error) {
 	return token.SignedString([]byte(j.secretKey))
 }
 
+// Decode a provided token and return the claims
+func (j *JWT) Decode(token string) (jwt.Claims, error) {
+	tkn, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		return []byte(j.secretKey), nil
+	})
+	return tkn.Claims, err
+}
+
+// Provide a middleware, which tries to decode bearer tokens from the auth header.
+// Pass wildcard (unchecked) routes as a parameter to this function
 func (j *JWT) Middleware(filteredRoutes []string) fiber.Handler {
 	return jwtware.New(jwtware.Config{
-		SigningKey: []byte("mySigningKey"),
+		SigningKey: []byte(j.secretKey),
 		Filter: func(c *fiber.Ctx) bool {
 			for _, route := range filteredRoutes {
 				if strings.HasSuffix(string(c.Request().URI().Path()), route) {
