@@ -40,11 +40,12 @@ func (c *Connection) init() {
 	c.sessionConnection = createSessionConnection(c.db)
 }
 
-// Query users
+// Get connection for users
 func (c *Connection) Users() *UserConnection {
 	return c.userConnection
 }
 
+// Get connection for sessions
 func (c *Connection) Sessions() *SessionConnection {
 	return c.sessionConnection
 }

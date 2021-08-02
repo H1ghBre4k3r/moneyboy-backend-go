@@ -50,7 +50,7 @@ func (s *Server) loadModules() {
 	db := database.New(mysql.Open(dsn), &gorm.Config{})
 
 	jwt := jwt.New("mySigningKey")
-	s.app.Use(jwt.Middleware())
+	s.app.Use(jwt.Middleware([]string{"/auth/login", "/auth/register"}))
 	// TODO lome: move to module and load session
 	s.app.Use(func(c *fiber.Ctx) error {
 		userClaims := c.Locals("user")

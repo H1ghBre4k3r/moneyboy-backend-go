@@ -19,15 +19,18 @@ func authController(router fiber.Router, authService AuthService) *AuthControlle
 	authController := &AuthController{
 		authService,
 	}
-	authController.registerRoutes(router)
+	authController._registerRoutes(router)
 	return authController
 }
 
+// POST /auth/login
 func (ctrl *AuthController) postLogin(c *fiber.Ctx) error {
 	user := new(global.LoginDTO)
+	// validate payload and on error, return error
 	if validation.New(c).Validate(user) != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
+	// process user data
 	retVal, err := ctrl.authService.Login(user)
 	if err != nil {
 		return c.SendStatus(fiber.StatusUnauthorized)
@@ -35,15 +38,17 @@ func (ctrl *AuthController) postLogin(c *fiber.Ctx) error {
 	return c.JSON(retVal)
 }
 
+// POST /auth/register
 func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
 	user := new(global.RegisterDTO)
+	// validate payload and on error, return error
 	if validation.New(c).Validate(user) != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 	status := fiber.StatusAccepted
-	internal, err := ctrl.authService.Register(user)
+	isInternalError, err := ctrl.authService.Register(user)
 	if err != nil {
-		if internal {
+		if isInternalError {
 			status = fiber.StatusInternalServerError
 		} else {
 			status = fiber.StatusBadRequest
@@ -52,7 +57,7 @@ func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
 	return c.SendStatus(status)
 }
 
-func (ctrl *AuthController) registerRoutes(router fiber.Router) {
+func (ctrl *AuthController) _registerRoutes(router fiber.Router) {
 	router.Post("/login", ctrl.postLogin)
 	router.Post("/register", ctrl.postRegister)
 }

@@ -1,14 +1,12 @@
 package jwt
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v2"
 	"github.com/golang-jwt/jwt"
 )
-
-type JwtParams interface {
-	GetSecretKey() string
-}
 
 type JWT struct {
 	secretKey string
@@ -31,14 +29,12 @@ func (j *JWT) Sign(cls map[string]interface{}) (string, error) {
 	return token.SignedString([]byte(j.secretKey))
 }
 
-func (j *JWT) Middleware() fiber.Handler {
+func (j *JWT) Middleware(filteredRoutes []string) fiber.Handler {
 	return jwtware.New(jwtware.Config{
 		SigningKey: []byte("mySigningKey"),
 		Filter: func(c *fiber.Ctx) bool {
-			// TODO lome: add param or sth else for filtered routes
-			ok := []string{"login", "register"}
-			for _, route := range ok {
-				if string(c.Request().URI().LastPathSegment()) == route {
+			for _, route := range filteredRoutes {
+				if strings.HasSuffix(string(c.Request().URI().Path()), route) {
 					return true
 				}
 			}

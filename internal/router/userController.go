@@ -23,10 +23,11 @@ func userController(router fiber.Router, userService UserService, sessionService
 		userService,
 		sessionService,
 	}
-	controller.register(router)
+	controller._registerRoutes(router)
 	return controller
 }
 
+// GET /user/profile
 func (ctrl *UserController) getProfile(c *fiber.Ctx) error {
 	id := c.Locals("sessionId").(string)
 	session := ctrl.sessionService.GetSession(id)
@@ -34,6 +35,6 @@ func (ctrl *UserController) getProfile(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-func (ctrl *UserController) register(router fiber.Router) {
+func (ctrl *UserController) _registerRoutes(router fiber.Router) {
 	router.Get("/profile", ctrl.getProfile)
 }

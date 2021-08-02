@@ -11,6 +11,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type JWT interface {
+	Sign(map[string]interface{}) (string, error)
+}
+
 type SessionService interface {
 	GetSession(string) *models.Session
 	CreateSession(string) (string, error)
