@@ -33,7 +33,7 @@ func (ctrl *AuthController) postLogin(c *fiber.Ctx) error {
 	// process user data
 	retVal, err := ctrl.authService.Login(user)
 	if err != nil {
-		return c.SendStatus(fiber.StatusUnauthorized)
+		return c.Status(fiber.StatusUnauthorized).SendString(err.Error())
 	}
 	return c.JSON(retVal)
 }
@@ -57,7 +57,13 @@ func (ctrl *AuthController) postRegister(c *fiber.Ctx) error {
 	return c.SendStatus(status)
 }
 
+func (ctrl *AuthController) postRefresh(c *fiber.Ctx) error {
+	// TODO lome: implement
+	return c.SendStatus(fiber.StatusInternalServerError)
+}
+
 func (ctrl *AuthController) _registerRoutes(router fiber.Router) {
 	router.Post("/login", ctrl.postLogin)
 	router.Post("/register", ctrl.postRegister)
+	router.Post("/refresh", ctrl.postRefresh)
 }

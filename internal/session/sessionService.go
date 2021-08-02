@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/models"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 )
 
@@ -50,4 +52,35 @@ func (s *SessionService) GetSession(sessionId string) *models.Session {
 // Destroy a session
 func (s *SessionService) DestroySession(sessionId string) error {
 	return s.db.Delete(sessionId)
+}
+
+func (s *SessionService) Middleware() func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
+		userClaims := c.Locals("user")
+		if userClaims == nil {
+			return c.Next()
+		}
+		claims := userClaims.(*jwt.Token).Claims.(jwt.MapClaims)
+		sessionId := claims["id"].(string)
+
+		// get the session
+		session := s.GetSession(sessionId)
+		if session == nil {
+			// if there is no session, return error
+			return c.SendStatus(fiber.StatusUnauthorized)
+		}
+
+		// get user
+		user := s.userService.GetUser(session.UserID)
+		if user == nil {
+			// if there is no user, destroy session and return error
+			s.DestroySession(sessionId)
+			return c.SendStatus(fiber.StatusUnauthorized)
+		}
+
+		// attach session to current request
+		session.User = *user
+		c.Locals("session", session)
+		return c.Next()
+	}
 }

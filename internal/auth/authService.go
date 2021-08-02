@@ -45,6 +45,10 @@ func (s *AuthService) Login(user *global.LoginDTO) (interface{}, error) {
 		return nil, errors.New("credentials do not match")
 	}
 
+	if !dbUser.EmailVerified {
+		return nil, errors.New("email not verified")
+	}
+
 	sessionId, err := s.sessionService.CreateSession(dbUser.ID)
 	if err != nil {
 		return nil, err
