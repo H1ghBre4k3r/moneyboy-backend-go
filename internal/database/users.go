@@ -45,3 +45,8 @@ func (uc *UserConnection) DeleteById(id string) error {
 func (uc *UserConnection) DeleteByUsername(username string) error {
 	return uc.db.Delete("username = ?", username).Error
 }
+
+// Update a user in the database
+func (uc *UserConnection) Update(user *models.User) error {
+	return uc.db.Save(user).Error
+}

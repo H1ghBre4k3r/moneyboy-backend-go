@@ -60,14 +60,15 @@ func (s *Server) loadModules() {
 
 	tokenJwt := jwt.New(variables.TOKEN.AccessTokenSecret)
 	refreshJwt := jwt.New(variables.TOKEN.RefreshTokenSecret)
-	s.app.Use(tokenJwt.Middleware([]string{"/auth/login", "/auth/register", "/auth/refresh"}))
+	verifyJwt := jwt.New(variables.TOKEN.VerifyTokenSecret)
+	s.app.Use(tokenJwt.Middleware([]string{"/auth/login", "/auth/register", "/auth/refresh", "/auth/verify"}))
 
 	user := user.New(db.Users())
 
 	session := session.New(db.Sessions(), user)
 	s.app.Use(session.Middleware())
 
-	auth := auth.New(db, tokenJwt, refreshJwt, session)
+	auth := auth.New(db, tokenJwt, refreshJwt, verifyJwt, session)
 
 	router := router.New(s.app.Group("/api/v1"), &router.RouterParams{
 		UserService:    user,

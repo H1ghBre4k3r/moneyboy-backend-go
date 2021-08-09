@@ -7,13 +7,16 @@ import (
 
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/global"
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/mail"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/models"
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/variables"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const SESSION_ID_FIELD = "id"
+const USER_ID_FIELD = "id"
 
 type JWT interface {
 	Sign(map[string]interface{}) (string, error)
@@ -30,14 +33,16 @@ type AuthService struct {
 	db             *database.Connection
 	tokenJwt       JWT
 	refreshJwt     JWT
+	verifyJwt      JWT
 	sessionService SessionService
 }
 
-func New(db *database.Connection, tokenJwt JWT, refreshJwt JWT, sessionService SessionService) *AuthService {
+func New(db *database.Connection, tokenJwt JWT, refreshJwt JWT, verifyJwt JWT, sessionService SessionService) *AuthService {
 	return &AuthService{
 		db,
 		tokenJwt,
 		refreshJwt,
+		verifyJwt,
 		sessionService,
 	}
 }
@@ -92,9 +97,25 @@ func (s *AuthService) Register(user *global.RegisterDTO) (bool, error) {
 		return true, err
 	}
 
+	// get a verify token for this user account
+	token, err := s.verifyJwt.Sign(createVerifyTokenClaims(newUser.ID))
+	if err != nil {
+		return true, err
+	}
+
+	// add the new user to the database
 	if err := s.db.Users().Create(newUser); err != nil {
 		return true, err
 	}
+
+	// Create mail and fill it with all relevant information
+	mail := mail.New(variables.MAIL.Auth.User, variables.MAIL.Auth.Pass, variables.MAIL.Host, variables.MAIL.Port)
+	url := fmt.Sprintf("%v/auth/verify?t=%v", variables.HOST, token)
+	mail.From(variables.MAIL.Addr).To(newUser.Email).Subject("MoneyBoy Registration").Content(fmt.Sprintf("Hello %v!\r\n\r\nThank you for registering for MoneyBoy! To verify your account, please click the following link: %v", newUser.DisplayName, url))
+	if err := mail.Send(); err != nil {
+		return true, err
+	}
+
 	return false, nil
 }
 
@@ -132,6 +153,30 @@ func (s *AuthService) Logout(session *models.Session) error {
 	return s.sessionService.DestroySession(session.ID)
 }
 
+// Verify a user
+func (s *AuthService) Verify(token string) error {
+
+	// extract claims from provided token
+	claims, err := s.verifyJwt.Decode(token)
+	if err != nil || claims == nil {
+		return errors.New("cannot decode token")
+	}
+
+	// get id from claims
+	id, ok := claims.(jwt.MapClaims)[USER_ID_FIELD].(string)
+	if !ok {
+		return errors.New("invalid token provided")
+	}
+
+	// try to get user and verify email
+	user := s.db.Users().FindById(id)
+	if user == nil || user.EmailVerified {
+		return errors.New("user not found or email already verified")
+	}
+	user.EmailVerified = true
+	return s.db.Users().Update(user)
+}
+
 func createUserFromDTO(user *global.RegisterDTO) (*models.User, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -149,10 +194,20 @@ func createUserFromDTO(user *global.RegisterDTO) (*models.User, error) {
 	}, nil
 }
 
-// create the claims for an access token based on a session id
+// create claims for an access token, which is valid for 15 minutes
 func createAccessTokenClaims(sessionId string) map[string]interface{} {
+	return createTokenClaims(SESSION_ID_FIELD, sessionId, 15)
+}
+
+// create claims for a verify token, which is valid for 48 hours
+func createVerifyTokenClaims(id string) map[string]interface{} {
+	return createTokenClaims(USER_ID_FIELD, id, 60*48)
+}
+
+// create the claims for an access token based on a session id
+func createTokenClaims(fieldName string, fieldValue string, exp_in time.Duration) map[string]interface{} {
 	return map[string]interface{}{
-		SESSION_ID_FIELD: sessionId,
-		"exp":            time.Now().Add(time.Minute * 15).Unix(),
+		fieldName: fieldValue,
+		"exp":     time.Now().Add(time.Minute * exp_in).Unix(),
 	}
 }

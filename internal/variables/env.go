@@ -5,7 +5,7 @@ import "os"
 type tokenVariables struct {
 	RefreshTokenSecret string
 	AccessTokenSecret  string
-	VerifiyTokenSecret string
+	VerifyTokenSecret  string
 }
 
 type databaseVariables struct {
@@ -33,7 +33,7 @@ var (
 	TOKEN = tokenVariables{
 		RefreshTokenSecret: os.Getenv("REFRESH_TOKEN_SECRET"),
 		AccessTokenSecret:  os.Getenv("ACCESS_TOKEN_SECRET"),
-		VerifiyTokenSecret: os.Getenv("VERIFY_TOKEN_SECRET"),
+		VerifyTokenSecret:  os.Getenv("VERIFY_TOKEN_SECRET"),
 	}
 	DATABASE = databaseVariables{
 		Host:     os.Getenv("DB_HOST"),

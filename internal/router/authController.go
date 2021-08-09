@@ -12,6 +12,7 @@ type AuthService interface {
 	Register(*global.RegisterDTO) (bool, error)
 	RefreshToken(*global.RefreshTokenDTO) (string, error)
 	Logout(*models.Session) error
+	Verify(string) error
 }
 
 type AuthController struct {
@@ -108,9 +109,25 @@ func (ctrl *AuthController) deleteLogout(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusAccepted)
 }
 
+// GET /auth/verify
+func (ctrl *AuthController) getVerify(c *fiber.Ctx) error {
+	// try to get token from query
+	token := c.Query("t")
+	if token == "" {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	// try to verify the token (or rather the user "behind" this token)
+	if err := ctrl.authService.Verify(token); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+	}
+	return c.Status(fiber.StatusOK).SendString("mail successfully verified")
+}
+
 func (ctrl *AuthController) _registerRoutes(router fiber.Router) {
 	router.Post("/login", ctrl.postLogin)
 	router.Post("/register", ctrl.postRegister)
 	router.Post("/refresh", ctrl.postRefresh)
 	router.Delete("/logout", ctrl.deleteLogout)
+	router.Get("/verify", ctrl.getVerify)
 }
