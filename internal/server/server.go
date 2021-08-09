@@ -1,12 +1,15 @@
 package server
 
 import (
+	"fmt"
+
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/auth"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/database"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/jwt"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/router"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/session"
 	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/user"
+	"git.pesca.dev/pesca-dev/moneyboy-backend/internal/variables"
 	"github.com/gofiber/fiber/v2"
 	fiberlog "github.com/gofiber/fiber/v2/middleware/logger"
 	"gorm.io/driver/mysql"
@@ -45,14 +48,18 @@ func (s *Server) init() {
 	s.loadModules()
 }
 
+func getDbDns() string {
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", variables.DATABASE.Username, variables.DATABASE.Password, variables.DATABASE.Host, variables.DATABASE.Port, variables.DATABASE.Name)
+}
+
 func (s *Server) loadModules() {
-	dsn := "root:12345678@tcp(127.0.0.1:3306)/moneyboy?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := getDbDns()
 	db := database.New(mysql.Open(dsn), &gorm.Config{
 		Logger: gormlog.Default.LogMode(gormlog.Error),
 	})
 
-	tokenJwt := jwt.New("mySigningKey")
-	refreshJwt := jwt.New("refreshSigningKey")
+	tokenJwt := jwt.New(variables.TOKEN.AccessTokenSecret)
+	refreshJwt := jwt.New(variables.TOKEN.RefreshTokenSecret)
 	s.app.Use(tokenJwt.Middleware([]string{"/auth/login", "/auth/register", "/auth/refresh"}))
 
 	user := user.New(db.Users())
